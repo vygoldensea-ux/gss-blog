@@ -37,26 +37,13 @@ def read_html(filepath):
 
 
 def fix_fonts(html, lang="en"):
-    """Fix lỗi font trong WP Preview mode — đặc biệt tiếng Việt"""
+    """Fix font cho WP"""
     if "font-family" in html[:500]:
-        return html  # Đã có font rồi
+        return html
     if lang == "vi":
-        style = (
-            "<style>"
-            "@import url('https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@400;500;600;700&display=swap');"
-            "body,p,h1,h2,h3,h4,li,td,th,blockquote{"
-            "font-family:'Be Vietnam Pro','Montserrat',system-ui,sans-serif}"
-            "</style>
-"
-        )
+        style = "<style>body,p,h1,h2,h3,h4,li,td,th{font-family:Arial,sans-serif}</style>"
     else:
-        style = (
-            "<style>"
-            "body,p,h1,h2,h3,h4,li,td,th,blockquote{"
-            "font-family:'Inter','Montserrat','Segoe UI',system-ui,sans-serif}"
-            "</style>
-"
-        )
+        style = "<style>body,p,h1,h2,h3,h4,li,td,th{font-family:Arial,sans-serif}</style>"
     return style + html
 
 
