@@ -26,54 +26,65 @@ jobs:
       - name: Read meta file
         id: meta
         run: |
+          set -a
           source output.meta
-          echo "title=$TITLE"                   >> $GITHUB_OUTPUT
-          echo "type=$TYPE"                     >> $GITHUB_OUTPUT
-          echo "category=$CATEGORY"             >> $GITHUB_OUTPUT
-          echo "tags=$TAGS"                     >> $GITHUB_OUTPUT
-          echo "slug=$SLUG"                     >> $GITHUB_OUTPUT
-          echo "excerpt=$EXCERPT"               >> $GITHUB_OUTPUT
-          echo "lang=${LANG:-en}"               >> $GITHUB_OUTPUT
-          echo "image_queries=$IMAGE_QUERIES"   >> $GITHUB_OUTPUT
-          echo "publish=${PUBLISH:-true}"       >> $GITHUB_OUTPUT
+          set +a
+          echo "title=${TITLE}" >> $GITHUB_OUTPUT
+          echo "type=${TYPE}" >> $GITHUB_OUTPUT
+          echo "category=${CATEGORY}" >> $GITHUB_OUTPUT
+          echo "tags=${TAGS}" >> $GITHUB_OUTPUT
+          echo "slug=${SLUG}" >> $GITHUB_OUTPUT
+          echo "excerpt=${EXCERPT}" >> $GITHUB_OUTPUT
+          echo "lang=${LANG:-en}" >> $GITHUB_OUTPUT
+          echo "image_queries=${IMAGE_QUERIES}" >> $GITHUB_OUTPUT
+          echo "publish=${PUBLISH:-true}" >> $GITHUB_OUTPUT
 
       - name: Create .env
         run: |
-          cat > .env << ENVEOF
-          WP_SITE_URL=${{ secrets.WP_SITE_URL }}
-          WP_USERNAME=${{ secrets.WP_USERNAME }}
-          WP_APP_PASSWORD=${{ secrets.WP_APP_PASSWORD }}
-          KIE_API_KEY=${{ secrets.KIE_API_KEY }}
-          UNSPLASH_ACCESS_KEY=${{ secrets.UNSPLASH_ACCESS_KEY }}
-          PEXELS_API_KEY=${{ secrets.PEXELS_API_KEY }}
-          GSS_CONTACT_URL=https://goldenseastudios.com/contact-us/
-          GSS_COMPANY_NAME=Golden Sea Studios
-          GSS_CTA_TAGLINE=We've helped 30+ startups ship AI, mobile & game products from Vietnam
-          ENVEOF
+          printf 'WP_SITE_URL=%s\n' "${{ secrets.WP_SITE_URL }}" > .env
+          printf 'WP_USERNAME=%s\n' "${{ secrets.WP_USERNAME }}" >> .env
+          printf 'WP_APP_PASSWORD=%s\n' "${{ secrets.WP_APP_PASSWORD }}" >> .env
+          printf 'KIE_API_KEY=%s\n' "${{ secrets.KIE_API_KEY }}" >> .env
+          printf 'UNSPLASH_ACCESS_KEY=%s\n' "${{ secrets.UNSPLASH_ACCESS_KEY }}" >> .env
+          printf 'PEXELS_API_KEY=%s\n' "${{ secrets.PEXELS_API_KEY }}" >> .env
+          printf 'GSS_CONTACT_URL=https://goldenseastudios.com/contact-us/\n' >> .env
+          printf 'GSS_COMPANY_NAME=Golden Sea Studios\n' >> .env
+          printf 'GSS_CTA_TAGLINE=We have helped 30+ startups ship AI mobile and game products from Vietnam\n' >> .env
 
       - name: Publish to WordPress
         run: |
           CMD="python3 main.py --file output.html --skip-validate"
-          CMD="$CMD --title \"${{ steps.meta.outputs.title }}\""
+          CMD="$CMD --title '${{ steps.meta.outputs.title }}'"
           CMD="$CMD --type ${{ steps.meta.outputs.type }}"
           CMD="$CMD --category ${{ steps.meta.outputs.category }}"
           CMD="$CMD --lang ${{ steps.meta.outputs.lang }}"
 
-          [ -n "${{ steps.meta.outputs.slug }}" ]          && CMD="$CMD --slug \"${{ steps.meta.outputs.slug }}\""
-          [ -n "${{ steps.meta.outputs.excerpt }}" ]       && CMD="$CMD --excerpt \"${{ steps.meta.outputs.excerpt }}\""
-          [ -n "${{ steps.meta.outputs.tags }}" ]          && CMD="$CMD --tags ${{ steps.meta.outputs.tags }}"
-          [ -n "${{ steps.meta.outputs.image_queries }}" ] && CMD="$CMD --image-queries ${{ steps.meta.outputs.image_queries }}"
-          [ "${{ steps.meta.outputs.publish }}" = "true" ] && CMD="$CMD --publish"
+          if [ -n "${{ steps.meta.outputs.slug }}" ]; then
+            CMD="$CMD --slug '${{ steps.meta.outputs.slug }}'"
+          fi
+          if [ -n "${{ steps.meta.outputs.excerpt }}" ]; then
+            CMD="$CMD --excerpt '${{ steps.meta.outputs.excerpt }}'"
+          fi
+          if [ -n "${{ steps.meta.outputs.tags }}" ]; then
+            CMD="$CMD --tags ${{ steps.meta.outputs.tags }}"
+          fi
+          if [ -n "${{ steps.meta.outputs.image_queries }}" ]; then
+            IQ=$(echo "${{ steps.meta.outputs.image_queries }}" | tr '|' ' ')
+            CMD="$CMD --image-queries $IQ"
+          fi
+          if [ "${{ steps.meta.outputs.publish }}" = "true" ]; then
+            CMD="$CMD --publish"
+          fi
 
-          echo "▶ $CMD"
+          echo "Running: $CMD"
           eval "$CMD"
 
-      - name: Clean up & commit back to main
+      - name: Clean up and push
         if: success()
         run: |
           git config user.email "bot@goldenseastudios.com"
           git config user.name "GSS Publisher Bot"
           rm -f output.html output.meta
           git add -A
-          git diff --cached --quiet || git commit -m "✅ published: ${{ steps.meta.outputs.slug }}"
+          git diff --cached --quiet || git commit -m "published: ${{ steps.meta.outputs.slug }}"
           git push origin main
