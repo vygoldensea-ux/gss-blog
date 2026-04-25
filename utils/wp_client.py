@@ -62,7 +62,22 @@ def _get_term_id(taxonomy, slug):
         items = r.json()
         if items:
             return items[0]["id"]
-        print(f"❌ {taxonomy} slug '{slug}' không tồn tại trong WP!")
+        # Fallback: thử slug uncategorized
+        print(f"⚠️  {taxonomy} slug '{slug}' không tìm thấy — thử fallback 'blog'")
+        r2 = requests.get(url, params={"slug": "blog", "per_page": 1, "hide_empty": False}, timeout=15)
+        r2.raise_for_status()
+        items2 = r2.json()
+        if items2:
+            print(f"✅ Dùng category 'blog' (ID {items2[0]['id']}) thay thế")
+            return items2[0]["id"]
+        # Final fallback: uncategorized
+        r3 = requests.get(url, params={"slug": "uncategorized", "per_page": 1}, timeout=15)
+        r3.raise_for_status()
+        items3 = r3.json()
+        if items3:
+            print(f"✅ Dùng 'uncategorized' (ID {items3[0]['id']}) thay thế")
+            return items3[0]["id"]
+        print(f"❌ Không tìm thấy category nào!")
         return None
     except Exception as e:
         print(f"⚠️  Lấy {taxonomy} ID lỗi: {e}")
