@@ -62,7 +62,7 @@ def _generate_cover_kie(prompt):
     # Thử endpoint generate trực tiếp
     try:
         r = requests.post(
-            "https://api.kie.ai/api/v1/images/generations",
+            "https://api.kie.ai/v1/images/generations",
             headers=headers,
             json={"prompt": prompt, "model": "nano-banana", "n": 1, "size": "1792x1024"},
             timeout=60

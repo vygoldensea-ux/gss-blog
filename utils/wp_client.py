@@ -57,7 +57,7 @@ def _get_term_id(taxonomy, slug):
     """Lấy ID của category hoặc tag từ slug"""
     url = f"{_site()}/wp-json/wp/v2/{taxonomy}"
     try:
-        r = requests.get(url, params={"slug": slug, "per_page": 1}, timeout=15)
+        r = requests.get(url, params={"slug": slug, "per_page": 1, "hide_empty": False}, timeout=15)
         r.raise_for_status()
         items = r.json()
         if items:
