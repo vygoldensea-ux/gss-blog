@@ -18,7 +18,7 @@ jobs:
       - name: Setup Python
         uses: actions/setup-python@v5
         with:
-          python-version: "3.11"
+          python-version: "3.12"
 
       - name: Install dependencies
         run: pip install -r requirements.txt
@@ -53,7 +53,7 @@ jobs:
 
       - name: Publish to WordPress
         run: |
-          CMD="python3 main.py --file output.html --skip-validate"
+          CMD="python main.py --file output.html --skip-validate"
           CMD="$CMD --title '${{ steps.meta.outputs.title }}'"
           CMD="$CMD --type ${{ steps.meta.outputs.type }}"
           CMD="$CMD --category ${{ steps.meta.outputs.category }}"
