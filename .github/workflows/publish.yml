@@ -14,49 +14,14 @@ jobs:
       contents: write
 
     steps:
-      - name: Checkout
-        uses: actions/checkout@v4
+      - uses: actions/checkout@v4
 
-      - name: Setup Python
-        uses: actions/setup-python@v5
+      - uses: actions/setup-python@v5
         with:
           python-version: "3.12"
 
       - name: Install dependencies
         run: pip install -r requirements.txt
-
-      - name: Parse meta file
-        id: meta
-        run: |
-          python3 << 'PYEOF'
-          import re, os
-
-          with open("output.meta", "r") as f:
-              content = f.read()
-
-          def get(key):
-              m = re.search(rf'^{key}=["\']?(.*?)["\']?\s*$', content, re.MULTILINE)
-              return m.group(1).strip().strip('"\'') if m else ""
-
-          pairs = {
-              "title":         get("TITLE"),
-              "type":          get("TYPE") or "insight",
-              "category":      get("CATEGORY") or "blog",
-              "tags":          get("TAGS"),
-              "slug":          get("SLUG"),
-              "excerpt":       get("EXCERPT"),
-              "lang":          get("LANG") or "en",
-              "image_queries": get("IMAGE_QUERIES"),
-              "publish":       get("PUBLISH") or "true",
-          }
-
-          env_file = os.environ["GITHUB_OUTPUT"]
-          with open(env_file, "a") as f:
-              for k, v in pairs.items():
-                  v_clean = v.replace("\n", " ").replace("'", "")
-                  f.write(f"{k}={v_clean}\n")
-                  print(f"  {k}: {v_clean[:60]}")
-          PYEOF
 
       - name: Create .env
         run: |
@@ -68,22 +33,73 @@ jobs:
           printf 'PEXELS_API_KEY=%s\n'       "${{ secrets.PEXELS_API_KEY }}"       >> .env
           printf 'GSS_CONTACT_URL=https://goldenseastudios.com/contact-us/\n'      >> .env
           printf 'GSS_COMPANY_NAME=Golden Sea Studios\n'                           >> .env
-          printf 'GSS_CTA_TAGLINE=We have helped 30+ startups ship products from Vietnam\n' >> .env
+          printf 'GSS_CTA_TAGLINE=We have helped 30+ startups ship products\n'    >> .env
 
-      - name: Publish to WordPress
+      - name: Publish via Python
         run: |
-          python main.py \
-            --file output.html \
-            --skip-validate \
-            --title "${{ steps.meta.outputs.title }}" \
-            --type "${{ steps.meta.outputs.type }}" \
-            --category "${{ steps.meta.outputs.category }}" \
-            --lang "${{ steps.meta.outputs.lang }}" \
-            $([ -n "${{ steps.meta.outputs.slug }}" ]    && echo "--slug '${{ steps.meta.outputs.slug }}'") \
-            $([ -n "${{ steps.meta.outputs.excerpt }}" ] && echo "--excerpt '${{ steps.meta.outputs.excerpt }}'") \
-            $([ -n "${{ steps.meta.outputs.tags }}" ]    && echo "--tags ${{ steps.meta.outputs.tags }}") \
-            $([ -n "${{ steps.meta.outputs.image_queries }}" ] && echo "--image-queries $(echo '${{ steps.meta.outputs.image_queries }}' | tr '|' ' ')") \
-            $([ "${{ steps.meta.outputs.publish }}" = "true" ] && echo "--publish")
+          python3 << 'PYEOF'
+          import re, subprocess, sys, os
+
+          # Đọc meta
+          with open("output.meta") as f:
+              raw = f.read()
+
+          def get(key, default=""):
+              m = re.search(rf'^{key}\s*=\s*["\']?(.*?)["\']?\s*$', raw, re.MULTILINE)
+              if not m:
+                  return default
+              v = m.group(1).strip().strip('"\'')
+              return v
+
+          title    = get("TITLE")
+          typ      = get("TYPE", "insight")
+          category = get("CATEGORY", "blog")
+          tags     = get("TAGS", "").split()
+          slug     = get("SLUG")
+          excerpt  = get("EXCERPT")
+          lang     = get("LANG", "en")
+          iq_raw   = get("IMAGE_QUERIES")
+          publish  = get("PUBLISH", "true").lower() == "true"
+
+          if not title:
+              print("❌ TITLE trống trong output.meta")
+              sys.exit(1)
+
+          print(f"Title   : {title}")
+          print(f"Type    : {typ}")
+          print(f"Category: {category}")
+          print(f"Tags    : {tags}")
+          print(f"Slug    : {slug}")
+          print(f"Lang    : {lang}")
+          print(f"Publish : {publish}")
+
+          cmd = [
+              "python", "main.py",
+              "--file", "output.html",
+              "--title", title,
+              "--type", typ,
+              "--category", category,
+              "--lang", lang,
+              "--skip-validate",
+          ]
+
+          if slug:
+              cmd += ["--slug", slug]
+          if excerpt:
+              cmd += ["--excerpt", excerpt]
+          if tags:
+              cmd += ["--tags"] + tags
+          if iq_raw:
+              queries = [q.strip() for q in iq_raw.replace("|", " ").split() if q.strip()]
+              if queries:
+                  cmd += ["--image-queries"] + queries
+          if publish:
+              cmd += ["--publish"]
+
+          print("\n▶ Running:", " ".join(cmd[:6]), "...")
+          result = subprocess.run(cmd)
+          sys.exit(result.returncode)
+          PYEOF
 
       - name: Clean up and push
         if: success()
@@ -92,5 +108,5 @@ jobs:
           git config user.name "GSS Publisher Bot"
           rm -f output.html output.meta
           git add -A
-          git diff --cached --quiet || git commit -m "published: ${{ steps.meta.outputs.slug }}"
+          git diff --cached --quiet || git commit -m "published: $(grep '^SLUG' output.meta 2>/dev/null | head -1 | cut -d= -f2 | tr -d '\"' || echo 'post')"
           git push origin main
