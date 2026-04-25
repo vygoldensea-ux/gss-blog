@@ -1,0 +1,20 @@
+{
+  "_note": "Categories THẬT trong goldenseastudios.com — export 2026-04-25. KHÔNG dùng slug ngoài danh sách này.",
+  "categories": [
+    { "slug": "ai-agency",         "name": "AI Agency",         "use_for": "AI, automation, LLM, ChatGPT, n8n, ML" },
+    { "slug": "it-solutions",      "name": "IT Solutions",      "use_for": "IT outsourcing, hire dev, offshore, software development" },
+    { "slug": "development",       "name": "Development",       "use_for": "Game dev, Unity, Unreal, web dev, app dev" },
+    { "slug": "apps",              "name": "Apps",              "use_for": "Mobile apps, SaaS, product launch" },
+    { "slug": "digital-marketing", "name": "Digital Marketing", "use_for": "Marketing, growth, content strategy" },
+    { "slug": "seosmm",            "name": "SEO & SMM",         "use_for": "SEO, social media marketing" },
+    { "slug": "ui-ux-design",      "name": "UI/UX Design",      "use_for": "Design, UX, product design, wireframe" },
+    { "slug": "identity",          "name": "Identity",          "use_for": "Branding, brand identity, visual design" },
+    { "slug": "modern-agency",     "name": "Modern Agency",     "use_for": "Agency news, team culture, GSS updates" },
+    { "slug": "consultant-agency", "name": "Consultant Agency", "use_for": "Consulting, advisory, strategy" },
+    { "slug": "blog",              "name": "Blog",              "use_for": "General, news, tutorials, tổng hợp" }
+  ],
+  "INVALID_do_not_use": [
+    "ai-solutions", "it-outsourcing", "game-development",
+    "tech-news", "tutorials", "case-studies", "tieng-viet"
+  ]
+}
