@@ -340,3 +340,30 @@ Quy tắc:
 - strong cho số liệu, tên tool, điểm quan trọng
 - KHÔNG inline CSS
 - KHÔNG dùng: game-changing, revolutionary, seamless, leverage, synergy, cutting-edge
+
+---
+
+## QUY TẮC VIẾT output.meta — BẮT BUỘC
+
+Dùng dấu nháy KÉP, KHÔNG dùng nháy đơn trong value:
+
+```
+TITLE="IT Outsourcing in Vietnam 2026: What Is Changing"
+TYPE="insight"
+CATEGORY="it-solutions"
+TAGS="it-solutions insight trend"
+SLUG="it-outsourcing-vietnam-2026"
+EXCERPT="Discover how Vietnam IT outsourcing market is evolving in 2026 with data on costs, talent, and trends."
+LANG="en"
+IMAGE_QUERIES="vietnam software developers office|it outsourcing team asia"
+PUBLISH="true"
+```
+
+KHÔNG viết:
+- TITLE='It's changing' ← dấu nháy đơn trong value gây lỗi shell
+- EXCERPT="Vietnam's market" ← dấu nháy đơn gây lỗi
+
+Thay apostrophe bằng cách viết khác:
+- "It's" → "It is"
+- "Vietnam's" → "Vietnam"
+- "don't" → "do not"

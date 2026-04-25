@@ -25,61 +25,65 @@ jobs:
       - name: Install dependencies
         run: pip install -r requirements.txt
 
-      - name: Read meta file
+      - name: Parse meta file
         id: meta
         run: |
-          set -a
-          source output.meta
-          set +a
-          echo "title=${TITLE}" >> $GITHUB_OUTPUT
-          echo "type=${TYPE}" >> $GITHUB_OUTPUT
-          echo "category=${CATEGORY}" >> $GITHUB_OUTPUT
-          echo "tags=${TAGS}" >> $GITHUB_OUTPUT
-          echo "slug=${SLUG}" >> $GITHUB_OUTPUT
-          echo "excerpt=${EXCERPT}" >> $GITHUB_OUTPUT
-          echo "lang=${LANG:-en}" >> $GITHUB_OUTPUT
-          echo "image_queries=${IMAGE_QUERIES}" >> $GITHUB_OUTPUT
-          echo "publish=${PUBLISH:-true}" >> $GITHUB_OUTPUT
+          python3 << 'PYEOF'
+          import re, os
+
+          with open("output.meta", "r") as f:
+              content = f.read()
+
+          def get(key):
+              m = re.search(rf'^{key}=["\']?(.*?)["\']?\s*$', content, re.MULTILINE)
+              return m.group(1).strip().strip('"\'') if m else ""
+
+          pairs = {
+              "title":         get("TITLE"),
+              "type":          get("TYPE") or "insight",
+              "category":      get("CATEGORY") or "blog",
+              "tags":          get("TAGS"),
+              "slug":          get("SLUG"),
+              "excerpt":       get("EXCERPT"),
+              "lang":          get("LANG") or "en",
+              "image_queries": get("IMAGE_QUERIES"),
+              "publish":       get("PUBLISH") or "true",
+          }
+
+          env_file = os.environ["GITHUB_OUTPUT"]
+          with open(env_file, "a") as f:
+              for k, v in pairs.items():
+                  v_clean = v.replace("\n", " ").replace("'", "")
+                  f.write(f"{k}={v_clean}\n")
+                  print(f"  {k}: {v_clean[:60]}")
+          PYEOF
 
       - name: Create .env
         run: |
-          printf 'WP_SITE_URL=%s\n' "${{ secrets.WP_SITE_URL }}" > .env
-          printf 'WP_USERNAME=%s\n' "${{ secrets.WP_USERNAME }}" >> .env
-          printf 'WP_APP_PASSWORD=%s\n' "${{ secrets.WP_APP_PASSWORD }}" >> .env
-          printf 'KIE_API_KEY=%s\n' "${{ secrets.KIE_API_KEY }}" >> .env
-          printf 'UNSPLASH_ACCESS_KEY=%s\n' "${{ secrets.UNSPLASH_ACCESS_KEY }}" >> .env
-          printf 'PEXELS_API_KEY=%s\n' "${{ secrets.PEXELS_API_KEY }}" >> .env
-          printf 'GSS_CONTACT_URL=https://goldenseastudios.com/contact-us/\n' >> .env
-          printf 'GSS_COMPANY_NAME=Golden Sea Studios\n' >> .env
-          printf 'GSS_CTA_TAGLINE=We have helped 30+ startups ship AI mobile and game products from Vietnam\n' >> .env
+          printf 'WP_SITE_URL=%s\n'          "${{ secrets.WP_SITE_URL }}"          > .env
+          printf 'WP_USERNAME=%s\n'          "${{ secrets.WP_USERNAME }}"          >> .env
+          printf 'WP_APP_PASSWORD=%s\n'      "${{ secrets.WP_APP_PASSWORD }}"      >> .env
+          printf 'KIE_API_KEY=%s\n'          "${{ secrets.KIE_API_KEY }}"          >> .env
+          printf 'UNSPLASH_ACCESS_KEY=%s\n'  "${{ secrets.UNSPLASH_ACCESS_KEY }}"  >> .env
+          printf 'PEXELS_API_KEY=%s\n'       "${{ secrets.PEXELS_API_KEY }}"       >> .env
+          printf 'GSS_CONTACT_URL=https://goldenseastudios.com/contact-us/\n'      >> .env
+          printf 'GSS_COMPANY_NAME=Golden Sea Studios\n'                           >> .env
+          printf 'GSS_CTA_TAGLINE=We have helped 30+ startups ship products from Vietnam\n' >> .env
 
       - name: Publish to WordPress
         run: |
-          CMD="python main.py --file output.html --skip-validate"
-          CMD="$CMD --title '${{ steps.meta.outputs.title }}'"
-          CMD="$CMD --type ${{ steps.meta.outputs.type }}"
-          CMD="$CMD --category ${{ steps.meta.outputs.category }}"
-          CMD="$CMD --lang ${{ steps.meta.outputs.lang }}"
-
-          if [ -n "${{ steps.meta.outputs.slug }}" ]; then
-            CMD="$CMD --slug '${{ steps.meta.outputs.slug }}'"
-          fi
-          if [ -n "${{ steps.meta.outputs.excerpt }}" ]; then
-            CMD="$CMD --excerpt '${{ steps.meta.outputs.excerpt }}'"
-          fi
-          if [ -n "${{ steps.meta.outputs.tags }}" ]; then
-            CMD="$CMD --tags ${{ steps.meta.outputs.tags }}"
-          fi
-          if [ -n "${{ steps.meta.outputs.image_queries }}" ]; then
-            IQ=$(echo "${{ steps.meta.outputs.image_queries }}" | tr '|' ' ')
-            CMD="$CMD --image-queries $IQ"
-          fi
-          if [ "${{ steps.meta.outputs.publish }}" = "true" ]; then
-            CMD="$CMD --publish"
-          fi
-
-          echo "Running: $CMD"
-          eval "$CMD"
+          python main.py \
+            --file output.html \
+            --skip-validate \
+            --title "${{ steps.meta.outputs.title }}" \
+            --type "${{ steps.meta.outputs.type }}" \
+            --category "${{ steps.meta.outputs.category }}" \
+            --lang "${{ steps.meta.outputs.lang }}" \
+            $([ -n "${{ steps.meta.outputs.slug }}" ]    && echo "--slug '${{ steps.meta.outputs.slug }}'") \
+            $([ -n "${{ steps.meta.outputs.excerpt }}" ] && echo "--excerpt '${{ steps.meta.outputs.excerpt }}'") \
+            $([ -n "${{ steps.meta.outputs.tags }}" ]    && echo "--tags ${{ steps.meta.outputs.tags }}") \
+            $([ -n "${{ steps.meta.outputs.image_queries }}" ] && echo "--image-queries $(echo '${{ steps.meta.outputs.image_queries }}' | tr '|' ' ')") \
+            $([ "${{ steps.meta.outputs.publish }}" = "true" ] && echo "--publish")
 
       - name: Clean up and push
         if: success()
